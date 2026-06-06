@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Match Planner</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+
+  <!-- ================================================
+       SCREEN: HOME
+  ================================================= -->
+  <div id="screen-home" class="screen">
+    <div class="home-header">
+      <div class="logo-area">
+        <div class="logo-icon">⚽</div>
+        <div>
+          <div class="logo-title">Match Planner</div>
+          <div class="logo-sub">サッカー指導者向け配置管理</div>
+        </div>
+      </div>
+    </div>
+    <div class="home-body">
+      <button id="btn-new-match" class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新しい試合を作成
+      </button>
+
+      <div class="quick-grid">
+        <button id="btn-players" class="btn-quick">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>選手管理</span>
+          <span id="home-player-count" class="quick-count">0名</span>
+        </button>
+        <button id="btn-history" class="btn-quick">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>試合履歴</span>
+          <span id="home-match-count" class="quick-count">0試合</span>
+        </button>
+      </div>
+
+      <div id="home-recent"></div>
+    </div>
+  </div>
+
+  <!-- ================================================
+       SCREEN: PLAYERS
+  ================================================= -->
+  <div id="screen-players" class="screen hidden">
+    <div class="top-header">
+      <button id="btn-back-players" class="btn-back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="header-title-wrap">
+        <div class="header-title">選手管理</div>
+      </div>
+      <div class="header-action">
+        <button id="btn-add-player" class="btn-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Player Add/Edit Form -->
+    <div id="player-form-wrap" class="scroll-body hidden" style="padding-bottom:0">
+      <div class="form-card">
+        <div id="player-form-title" class="form-title">選手を追加</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label class="field-label">選手名 *</label>
+            <input id="pf-name" class="field-input" type="text" placeholder="例: 山田 太郎">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="field-label">背番号</label>
+            <input id="pf-number" class="field-input" type="number" min="1" max="99" placeholder="10">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">学年</label>
+            <div class="field-select-wrap">
+              <select id="pf-grade" class="field-input grade-select"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-label">メインポジション</label>
+            <div class="field-select-wrap">
+              <select id="pf-main" class="field-input pos-select"></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">サブポジション（任意）</label>
+          <input id="pf-sub" class="field-input" type="text" placeholder="例: CB, RB">
+        </div>
+        <div class="btn-group">
+          <button id="btn-player-form-cancel" class="btn-secondary">キャンセル</button>
+          <button id="btn-player-form-save" class="btn-primary-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player List -->
+    <div id="player-list-body" class="player-list" style="flex:1;overflow-y:auto"></div>
+  </div>
+
+  <!-- ================================================
+       SCREEN: NEW MATCH
+  ================================================= -->
+  <div id="screen-new-match" class="screen hidden">
+    <div class="top-header">
+      <button id="btn-back-new-match" class="btn-back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="header-title-wrap">
+        <div class="header-title">試合を作成</div>
+      </div>
+    </div>
+    <div class="scroll-body">
+      <div class="form-card">
+        <div class="form-group">
+          <label class="field-label">対戦相手 *</label>
+          <input id="nm-opponent" class="field-input" type="text" placeholder="例: ○○FC">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">日付</label>
+            <input id="nm-date" class="field-input" type="date">
+          </div>
+          <div class="form-group">
+            <label class="field-label">試合種別</label>
+            <div class="field-select-wrap">
+              <select id="nm-type" class="field-input type-select"></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">会場</label>
+            <input id="nm-venue" class="field-input" type="text" placeholder="例: 市営グラウンド">
+          </div>
+          <div class="form-group">
+            <label class="field-label">カテゴリー</label>
+            <input id="nm-category" class="field-input" type="text" placeholder="例: U15リーグ">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">試合名（省略可）</label>
+          <input id="nm-name" class="field-input" type="text" placeholder="省略すると「vs 対戦相手」になります">
+        </div>
+        <div class="form-group">
+          <label class="field-label">フォーメーション</label>
+          <div id="formation-btns" class="formation-grid"></div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            前回の配置をコピー（任意）
+          </label>
+          <div class="field-select-wrap">
+            <select id="nm-copy" class="field-input"></select>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-create-match" class="btn-primary" style="margin-top:4px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" stroke-width="1.5"/></svg>
+        試合を作成して配置開始
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================
+       SCREEN: MATCH
+  ================================================= -->
+  <div id="screen-match" class="screen hidden">
+    <div class="top-header">
+      <button id="btn-back-match" class="btn-back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="header-title-wrap">
+        <div class="header-title" id="match-title"></div>
+        <div class="header-sub" id="match-type-badge"></div>
+      </div>
+    </div>
+    <div id="match-meta" class="match-meta-bar"></div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="board">配置</button>
+      <button class="tab-btn" data-tab="subs">交代</button>
+      <button class="tab-btn" data-tab="bench">ベンチ</button>
+      <button id="tab-time-btn" class="tab-btn" data-tab="time">出場時間</button>
+    </div>
+
+    <!-- Tab Contents -->
+    <div class="tab-content">
+
+      <!-- BOARD TAB -->
+      <div id="tab-board" class="tab-pane active">
+        <div class="board-layout">
+          <div class="pitch-panel">
+            <div class="formation-badge">
+              <span id="formation-badge-text" class="formation-badge-text">4-3-3</span>
+              <span id="placed-count" class="placed-count">0/11</span>
+            </div>
+            <div class="pitch">
+              <div id="pitch-rows"></div>
+            </div>
+            <div id="selection-hint" class="selection-hint">
+              <span style="color:var(--dim)">ポジションまたは選手をタップして配置</span>
+            </div>
+          </div>
+          <!-- Player Strip -->
+          <div class="player-strip-wrap">
+            <div class="player-strip-header">
+              <span class="strip-title">選手一覧</span>
+              <span id="strip-count" class="strip-count">0名未配置</span>
+            </div>
+            <div id="player-strip" class="player-strip"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBS TAB -->
+      <div id="tab-subs" class="tab-pane">
+        <div style="padding:12px 16px 8px;flex-shrink:0">
+          <button id="btn-add-sub" class="btn-primary-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            交代を追加
+          </button>
+        </div>
+        <div id="subs-body" class="subs-scroll"></div>
+      </div>
+
+      <!-- BENCH TAB -->
+      <div id="tab-bench" class="tab-pane">
+        <div id="bench-body" class="bench-scroll player-list"></div>
+      </div>
+
+      <!-- TIME TAB -->
+      <div id="tab-time" class="tab-pane">
+        <div id="time-body" class="time-scroll"></div>
+      </div>
+
+    </div><!-- /tab-content -->
+  </div><!-- /screen-match -->
+
+  <!-- ================================================
+       SCREEN: HISTORY
+  ================================================= -->
+  <div id="screen-history" class="screen hidden">
+    <div class="top-header">
+      <button id="btn-back-history" class="btn-back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="header-title-wrap">
+        <div class="header-title">試合履歴</div>
+      </div>
+    </div>
+    <div id="history-body" class="history-scroll"></div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ================================================
+     SUB FORM MODAL
+================================================= -->
+<div id="sub-form-overlay" class="modal-overlay">
+  <div class="bottom-sheet">
+    <div class="sheet-header">
+      <span class="sheet-title">交代を追加</span>
+      <button id="btn-sub-cancel" class="btn-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:16px">
+      <div class="form-group">
+        <label class="field-label">時間（分）</label>
+        <input id="sf-minute" class="field-input" type="number" min="1" max="120" placeholder="例: 45">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">▼ OUT（交代される）</label>
+          <div class="field-select-wrap">
+            <select id="sf-out" class="field-input"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">▲ IN（入る選手）</label>
+          <div class="field-select-wrap">
+            <select id="sf-in" class="field-input"></select>
+          </div>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button id="btn-sub-cancel2" class="btn-secondary">キャンセル</button>
+        <button id="btn-sub-save" class="btn-primary-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          追加
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     CONFIRM DIALOG
+================================================= -->
+<div id="confirm-overlay" class="confirm-overlay">
+  <div class="confirm-box">
+    <div id="confirm-title" class="confirm-title"></div>
+    <div id="confirm-msg" class="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button id="confirm-cancel" class="btn-confirm-cancel">キャンセル</button>
+      <button id="confirm-ok" class="btn-confirm-ok">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script src="script.js"></script>
+<script>
+  // Extra wiring that needs DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-back-history').onclick = () => {
+      renderHome();
+    };
+    document.getElementById('btn-sub-cancel2').onclick = () => {
+      document.getElementById('sub-form-overlay').classList.remove('open');
+    };
+  });
+</script>
+</body>
+</html>
