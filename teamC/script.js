@@ -7,7 +7,7 @@
 // ============================================================
 // ★ JSONBin 設定 ── ここに自分のIDとAPIキーを入力 ★
 // ============================================================
-const BIN_ID  = '6a241ce5f5f4af5e29c25c0e';
+const BIN_ID  = '6a262a28f5f4af5e29c8d2dd';
 const API_KEY = '$2a$10$xopawUKPa.2MV76.BGLZtehG8EauPnBwXLLyCgXqw/H5NfvD.yuOq';
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
