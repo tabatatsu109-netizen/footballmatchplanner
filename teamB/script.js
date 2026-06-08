@@ -6,7 +6,7 @@
 // ============================================================
 // ★ JSONBin 設定
 // ============================================================
-const BIN_ID  = '6a241ce5f5f4af5e29c25c0e';
+const BIN_ID  = '6a26279cf5f4af5e29c8caeb';
 const API_KEY = '$2a$10$xopawUKPa.2MV76.BGLZtehG8EauPnBwXLLyCgXqw/H5NfvD.yuOq';
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
