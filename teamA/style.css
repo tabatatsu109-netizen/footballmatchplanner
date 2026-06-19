@@ -1498,6 +1498,13 @@ label.field-label { font-size: 12px; color: var(--muted); font-weight: 600; }
 }
 .btn-send-grande:active  { opacity: 0.85; }
 .btn-send-grande:disabled { opacity: 0.5; cursor: not-allowed; }
+.hp-grande-posted-note {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  text-align: center;
+}
 
 /* ============================================================
    最新情報投稿機能  v3.1

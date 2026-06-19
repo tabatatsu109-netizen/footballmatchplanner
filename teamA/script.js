@@ -1038,8 +1038,28 @@ function renderHistory() {
     btn.onclick=e=>{
       e.stopPropagation();
       const mid=btn.dataset.mid, match=matches.find(m=>m.id===mid);
-      showConfirm('試合を削除',`「${match?.name}」を削除しますか？`,()=>{
+      const postedToGrande = !!(match && match.result && match.result.grandePosted);
+      const msg = postedToGrande
+        ? `「${match?.name}」を削除しますか？\n※GRANDEホームページにも掲載中です。同時に削除されます。`
+        : `「${match?.name}」を削除しますか？`;
+      showConfirm('試合を削除', msg, async ()=>{
         matches=matches.filter(m=>m.id!==mid); saveMatches(); renderHistory();
+
+        // ★ GRANDE側のクリーンアップ
+        //   送信済みフラグがある試合は確実に削除を試みる。
+        //   フラグが無い試合（この機能の追加前に送信したもの）も
+        //   念のためベストエフォートで同じIDを試し、残っていれば一緒に消す。
+        const newsId = (match && match.result && match.result.grandeNewsId)
+          || (match ? buildNewsPost(match).id : null);
+        if (newsId) {
+          const res = await deleteGrandeNewsPost(newsId);
+          if (postedToGrande) {
+            if (res.ok) showToast(res.found ? '🗑 GRANDEホームページからも削除しました' : '🗑 試合を削除しました');
+            else        showToast('⚠️ ホームページ側の削除に失敗しました（通信環境をご確認のうえ再度お試しください）');
+          } else if (res.ok && res.found) {
+            showToast('🗑 GRANDEホームページに残っていた記事も削除しました');
+          }
+        }
       });
     };
   });
@@ -1580,15 +1600,42 @@ function renderHpView() {
   // GRANDEに送信ボタンを末尾に追加
   if (isOfficial && publishOn) {
     const sendWrap = el('div','hp-section');
+    const posted = r.grandePosted === true;
     sendWrap.innerHTML = `
       <div class="hp-section-title">GRANDEホームページ連携</div>
       <div class="hp-send-desc">「送信」を押すと、この試合結果記事がGRANDEホームページのニュース一覧に自動反映されます。<br>同じ試合を再送信した場合は上書き更新されます。</div>
       <button id="btn-send-grande" class="btn-send-grande">
         🌐 GRANDEに送信
-      </button>`;
+      </button>
+      ${posted ? `
+      <div class="hp-grande-posted-note">✅ ホームページに掲載中です</div>
+      <button id="btn-delete-grande" class="btn-secondary" style="width:100%;margin-top:8px;color:var(--red)">
+        🗑 ホームページから記事を削除
+      </button>` : ''}`;
     body.appendChild(sendWrap);
     const sendBtn = $('#btn-send-grande');
     if (sendBtn) sendBtn.onclick = sendToGrande;
+
+    const delBtn = $('#btn-delete-grande');
+    if (delBtn) {
+      delBtn.onclick = () => {
+        showConfirm('記事を削除', 'GRANDEホームページのニュース記事を削除しますか？\n（Match Plannerの試合データはそのまま残ります）', async () => {
+          delBtn.disabled = true; delBtn.textContent = '削除中...';
+          const newsId = r.grandeNewsId || buildNewsPost(currentMatch).id;
+          const res = await deleteGrandeNewsPost(newsId);
+          if (res.ok) {
+            currentMatch.result.grandePosted = false;
+            currentMatch.result.grandeNewsId = null;
+            saveCurrentMatch();
+            showToast(res.found ? '🗑 ホームページから削除しました' : '記事は既に削除されていました');
+            renderHpView();
+          } else {
+            showToast('⚠️ 削除に失敗しました（通信環境をご確認のうえ再度お試しください）');
+            delBtn.disabled = false; delBtn.textContent = '🗑 ホームページから記事を削除';
+          }
+        });
+      };
+    }
   }
 }
 
@@ -1774,6 +1821,12 @@ async function sendToGrande() {
     });
     if (!putRes.ok) throw new Error('PUT失敗: HTTP ' + putRes.status);
 
+    // ★ 送信済みフラグを試合データに記録（削除時にホームページ側も消せるようにする）
+    if (!currentMatch.result) currentMatch.result = {};
+    currentMatch.result.grandePosted  = true;
+    currentMatch.result.grandeNewsId  = newPost.id;
+    saveCurrentMatch();
+
     showToast('✅ GRANDEホームページに送信しました');
     renderHpView();
 
@@ -1782,6 +1835,55 @@ async function sendToGrande() {
     showToast('❌ 送信失敗: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🌐 GRANDEに送信'; }
+  }
+}
+
+/**
+ * GRANDEニュースBinから記事を削除する。
+ * sendToGrande と対になる処理:
+ *  1. GET で現在の posts を取得
+ *  2. 指定 id の記事を除外
+ *  3. PUT で保存し直す
+ *
+ * 記事が見つからなかった場合も found:false でエラーなく返す
+ * （すでに削除済み・未送信の場合に呼んでも安全）。
+ */
+async function deleteGrandeNewsPost(postId) {
+  if (!postId) return { ok: true, found: false };
+
+  var NEWS_URL = 'https://api.jsonbin.io/v3/b/' + GRANDE_NEWS_BIN;
+
+  try {
+    var getRes = await fetch(NEWS_URL + '/latest', {
+      headers: { 'X-Master-Key': GRANDE_API_KEY }
+    });
+    if (!getRes.ok) throw new Error('GET失敗: HTTP ' + getRes.status);
+    var getJson = await getRes.json();
+
+    var posts = (getJson.record && Array.isArray(getJson.record.posts))
+      ? getJson.record.posts
+      : [];
+
+    var nextPosts = posts.filter(function(p){ return p.id !== postId; });
+    if (nextPosts.length === posts.length) {
+      return { ok: true, found: false }; // 元々載っていなかった
+    }
+
+    var putRes = await fetch(NEWS_URL, {
+      method:  'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': GRANDE_API_KEY
+      },
+      body: JSON.stringify({ posts: nextPosts })
+    });
+    if (!putRes.ok) throw new Error('PUT失敗: HTTP ' + putRes.status);
+
+    return { ok: true, found: true };
+
+  } catch (e) {
+    console.error('GRANDE削除エラー:', e);
+    return { ok: false, error: e };
   }
 }
 
